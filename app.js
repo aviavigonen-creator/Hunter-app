@@ -75,30 +75,94 @@
   }
 
   // ---------- onboarding ----------
+  const TAX = window.HunterTax, same = list => list.map(x => [x, x]);
+  const isSales = d => arr(d.functions).some(f => f === "מכירות" || f === "פיתוח עסקי");
   const STEPS = [
-    { title: "נעים להכיר", lead: "כמה שאלות קצרות, ונתאים לך את המשרות הכי רלוונטיות במכירות בהייטק.", qs: [
+    { title: "נעים להכיר", lead: "", qs: [
       { key: "name", label: "איך קוראים לך?", type: "text", placeholder: "שם פרטי" },
-      { key: "years", label: "כמה שנות ניסיון יש לך במכירות?", type: "one", opts: [["0", "בלי ניסיון"], ["1", "שנה עד שנתיים"], ["3", "3 עד 5"], ["6", "6 עד 10"], ["11", "יותר מ-10"]] } ] },
-    { title: "הניסיון שלך", lead: "אפשר לבחור כמה תשובות.", qs: [
-      { key: "kinds", label: "באילו סוגי מכירות עבדת?", type: "many", opts: [["field", "מכירות שטח"], ["phone", "מכירות טלפוניות"], ["accounts", "ניהול תיקי לקוחות"], ["team", "ניהול צוות"], ["software", "מכירת תוכנה"]] },
-      { key: "sectors", label: "אילו תחומים אתה מכיר?", type: "many", opts: ["תקשורת", "פיננסים ותשלומים", "קמעונאות", "אבטחה ומיגון", "בריאות", "רכב ואנרגיה"].map(s => [s, s]) } ] },
-    { title: "איפה ואיך", lead: "", qs: [
-      { key: "regions", label: "באילו אזורים מתאים לך לעבוד?", type: "many", opts: ["ירושלים", "מרכז", "שרון", "שפלה", "צפון", "דרום"].map(s => [s, s]) },
-      { key: "modes", label: "איזה אופי עבודה מתאים לך?", type: "many", opts: ["שטח", "היברידי", "משרד"].map(s => [s, s]) } ] },
+      { key: "functions", label: "באילו תחומים אתה מחפש עבודה?", type: "many", opts: same(TAX.functions) } ] },
+    { title: "הניסיון שלך", lead: "", qs: [
+      { key: "years", label: "כמה שנות ניסיון יש לך בתחום?", type: "one", opts: [["0", "בלי ניסיון"], ["1", "שנה עד שנתיים"], ["3", "3 עד 5"], ["6", "6 עד 10"], ["11", "יותר מ-10"]] },
+      { key: "management", label: "ניהלת צוות?", type: "one", opts: [["yes", "כן"], ["no", "לא"]] },
+      { key: "kinds", label: "באילו סוגי מכירות עבדת?", type: "many", optional: true, when: isSales, opts: TAX.salesKinds },
+      { key: "sectors", label: "אילו ענפים אתה מכיר?", type: "many", optional: true, opts: same(TAX.sectors) } ] },
+    { title: "איפה ואיך", lead: "אפשר לבחור כמה תשובות.", qs: [
+      { key: "regions", label: "באילו אזורים מתאים לך לעבוד?", type: "many", opts: same(TAX.regions) },
+      { key: "modes", label: "איזה אופי עבודה מתאים לך?", type: "many", opts: same(TAX.modes) } ] },
     { title: "תנאים", lead: "", qs: [
-      { key: "wantsCar", label: "חשוב לך רכב צמוד?", type: "one", opts: [["yes", "כן"], ["no", "לא חובה"]] },
-      { key: "minPay", label: "מה השכר החודשי שאתה מכוון אליו, כולל עמלות?", type: "one", opts: [["0", "פתוח"], ["12000", "12 אלף ₪ ומעלה"], ["18000", "18 אלף ₪ ומעלה"], ["25000", "25 אלף ₪ ומעלה"], ["30000", "30 אלף ₪ ומעלה"]] } ] },
+      { key: "minPay", label: "מה השכר החודשי שאתה מכוון אליו?", type: "one", opts: [["0", "פתוח"], ["12000", "12 אלף ₪ ומעלה"], ["18000", "18 אלף ₪ ומעלה"], ["25000", "25 אלף ₪ ומעלה"], ["30000", "30 אלף ₪ ומעלה"]] },
+      { key: "wantsCar", label: "חשוב לך רכב צמוד?", type: "one", opts: [["yes", "כן"], ["no", "לא חובה"]] } ] },
     { title: "עוד שני פרטים", lead: "", qs: [
       { key: "english", label: "מה רמת האנגלית שלך?", type: "one", opts: [["basic", "בסיסית"], ["good", "טובה"], ["fluent", "שוטפת"]] },
       { key: "degree", label: "יש לך תואר אקדמי?", type: "one", opts: [["yes", "כן"], ["no", "לא"]] } ] }
   ];
-  let draft = null, step = 0;
-  function toDraft(p) { return p ? { ...p, years: str(p.years), minPay: str(p.minPay), wantsCar: p.wantsCar ? "yes" : "no", degree: p.degree ? "yes" : "no" } : { kinds: [], sectors: [], regions: [], modes: [] }; }
-  function fromDraft(d) { return { ...d, name: str(d.name).trim().slice(0, 40), years: Number(d.years) || 0, minPay: Number(d.minPay) || 0, wantsCar: d.wantsCar === "yes", degree: d.degree === "yes" }; }
-  function stepDone(s) { return s.qs.every(q => q.type === "many" ? (q.key === "sectors" || arr(draft[q.key]).length) : str(draft[q.key]).trim()); }
+  const YEAR_BUCKETS = [11, 6, 3, 1, 0];
+  const bucket = y => str(YEAR_BUCKETS.find(b => (Number(y) || 0) >= b));
+  const yn = v => (v === true ? "yes" : v === false ? "no" : undefined);
+  let draft = null, step = -1, cvNote = "";
+  function toDraft(p) {
+    const d = { functions: [], kinds: [], sectors: [], regions: [], modes: [] };
+    if (!p) return d;
+    return { ...d, ...p, years: bucket(p.years), minPay: str(p.minPay || 0), wantsCar: yn(!!p.wantsCar), degree: yn(!!p.degree), management: yn(!!p.management || arr(p.kinds).includes("team")) };
+  }
+  function fromDraft(d) {
+    return { ...d, kinds: isSales(d) ? arr(d.kinds).filter(k => k !== "team") : [], name: str(d.name).trim().slice(0, 40), years: Number(d.years) || 0, minPay: Number(d.minPay) || 0,
+      wantsCar: d.wantsCar === "yes", degree: d.degree === "yes", management: d.management === "yes" };
+  }
+  const shown = s => s.qs.filter(q => !q.when || q.when(draft));
+  function stepDone(s) { return shown(s).every(q => q.optional || (q.type === "many" ? arr(draft[q.key]).length : str(draft[q.key]).trim())); }
+
+  // Fills the questionnaire from what the CV analysis found. Only known values are taken; the user confirms every step.
+  function applyCv(found) {
+    const pick = (list, allowed) => arr(list).filter(x => allowed.includes(x));
+    if (str(found.name).trim()) draft.name = str(found.name).trim().slice(0, 40);
+    const f = pick(found.functions, TAX.functions); if (f.length) draft.functions = f;
+    const sec = pick(found.sectors, TAX.sectors); if (sec.length) draft.sectors = sec;
+    const reg = pick(found.regions, TAX.regions); if (reg.length) draft.regions = reg;
+    const k = pick(found.kinds, TAX.salesKinds.map(x => x[0])); if (k.length) draft.kinds = k;
+    if (found.years != null && !isNaN(Number(found.years))) draft.years = bucket(found.years);
+    if (typeof found.management === "boolean") draft.management = yn(found.management);
+    if (typeof found.degree === "boolean") draft.degree = yn(found.degree);
+    if (["basic", "good", "fluent"].includes(found.english)) draft.english = found.english;
+  }
+  async function analyzeCv(file, say) {
+    say("קורא את הקובץ…");
+    let text;
+    try { text = (await HunterCV.extractText(file)).trim(); }
+    catch (e) { throw new Error(e.message === "type" ? "אפשר להעלות קובץ PDF, Word (docx) או טקסט." : "לא הצלחנו לקרוא את הקובץ. נסה קובץ אחר, או מלא את הפרטים לבד."); }
+    if (text.length < 200) throw new Error("לא מצאנו טקסט בקובץ. ייתכן שהוא סרוק כתמונה. נסה קובץ אחר, או מלא את הפרטים לבד.");
+    if (text.length > 40000) throw new Error("הקובץ ארוך מדי לניתוח. נסה גרסה קצרה יותר של קורות החיים.");
+    say("מנתח את קורות החיים…");
+    try { await ensureSession(); return { found: await call("/functions/v1/analyze-cv", { method: "POST", body: { text } }), source: "ai" }; }
+    catch (e) { return { found: HunterCV.analyzeLocal(text), source: "local" }; }
+  }
+  function renderCvStep() {
+    const status = h("p", { class: "hint", "aria-live": "polite" });
+    const input = h("input", { type: "file", id: "cv-file", accept: ".pdf,.docx,.txt,application/pdf,text/plain", hidden: "" });
+    const pickBtn = h("button", { class: "btn primary", on: { click: () => input.click() } }, "העלאת קורות חיים");
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0]; if (!file) return;
+      pickBtn.disabled = true;
+      try {
+        const { found, source } = await analyzeCv(file, t => { status.textContent = t; });
+        applyCv(found);
+        cvNote = source === "ai" ? "מילאנו את הפרטים לפי קורות החיים שלך. בדוק ותקן מה שצריך."
+          : "מילאנו את מה שהצלחנו לזהות בקורות החיים. זה זיהוי בסיסי, אז כדאי לעבור ולתקן.";
+        step = 0; renderOnboarding(); scrollTo(0, 0);
+      } catch (e) { status.textContent = e.message; pickBtn.disabled = false; input.value = ""; }
+    });
+    app.replaceChildren(h("section", { class: "step" },
+      h("div", { class: "sec" }, h("h1", { class: "brand" }, "Hunter"), h("h2", null, "נמצא לך את המשרות שהכי מתאימות לך")),
+      h("p", null, "העלה קורות חיים ונמלא את הפרטים בשבילך. אפשר גם לדלג ולענות על כמה שאלות קצרות."),
+      h("div", { class: "actions" }, pickBtn, h("button", { class: "btn", on: { click: () => { step = 0; renderOnboarding(); } } }, "דלג, אמלא לבד"), input),
+      status,
+      h("p", { class: "hint" }, "הקובץ נקרא בטלפון שלך ולא נשמר. הטקסט שלו נשלח לניתוח אוטומטי, ורק התשובות שתאשר נשמרות בפרופיל."),
+      profile && profile.functions ? h("div", { class: "nav" }, h("button", { class: "btn", on: { click: () => { draft = null; location.hash = ""; route(); } } }, "ביטול")) : null));
+  }
 
   function renderOnboarding() {
-    if (!draft) { draft = toDraft(profile); step = 0; }
+    if (!draft) { draft = toDraft(profile); step = -1; cvNote = ""; }
+    if (step < 0) return renderCvStep();
     const s = STEPS[step], last = step === STEPS.length - 1;
     const hint = h("p", { class: "hint", "aria-live": "polite" });
     const next = h("button", { class: "btn primary", on: { click: async () => {
@@ -108,7 +172,7 @@
       try { await saveProfile(fromDraft(draft)); } catch (e) { /* kept on this phone; it is sent again on the next save */ }
       draft = null; store.set("seen", jobs.map(x => x.id)); location.hash = ""; route(); scrollTo(0, 0);
     } } }, last ? "הצג לי משרות" : "המשך");
-    const qEls = s.qs.map(q => {
+    const qEls = shown(s).map(q => {
       if (q.type === "text") {
         const input = h("input", { type: "text", id: "q-" + q.key, placeholder: q.placeholder, maxlength: "40", autocomplete: "given-name" });
         input.value = str(draft[q.key]); input.addEventListener("input", () => { draft[q.key] = input.value; });
@@ -124,16 +188,14 @@
         } } }, label);
       }));
       paint();
-      return h("div", { class: "q" }, h("div", { class: "qt" }, q.label), group);
+      return h("div", { class: "q" }, h("div", { class: "qt" }, q.label + (q.optional ? " (לא חובה)" : "")), group);
     });
     app.replaceChildren(h("section", { class: "step" },
       h("div", { class: "progress", role: "progressbar", "aria-valuemin": "1", "aria-valuemax": String(STEPS.length), "aria-valuenow": String(step + 1) }, h("i", { style: "width:" + ((step + 1) / STEPS.length * 100) + "%" })),
       h("div", { class: "sec" }, h("h2", null, s.title), s.lead && h("p", { class: "sub" }, s.lead)),
+      cvNote && h("p", { class: "notice" }, cvNote),
       ...qEls, hint,
-      h("div", { class: "nav" },
-        step > 0 ? h("button", { class: "btn", on: { click: () => { step--; renderOnboarding(); } } }, "חזרה")
-          : profile ? h("button", { class: "btn", on: { click: () => { draft = null; location.hash = ""; route(); } } }, "ביטול") : h("span"),
-        next)));
+      h("div", { class: "nav" }, h("button", { class: "btn", on: { click: () => { step--; renderOnboarding(); scrollTo(0, 0); } } }, "חזרה"), next)));
   }
 
   // ---------- list ----------
@@ -152,7 +214,7 @@
     app.replaceChildren(
       h("header", { class: "top" },
         h("div", { class: "toprow" },
-          h("div", null, h("h1", { class: "brand" }, "Hunter"), h("p", { class: "sub" }, (profile.name ? profile.name + ", " : "") + "משרות מכירות בהייטק שמתאימות לך")),
+          h("div", null, h("h1", { class: "brand" }, "Hunter"), h("p", { class: "sub" }, (profile.name ? profile.name + ", " : "") + "משרות שמתאימות לך")),
           h("button", { class: "textbtn", on: { click: () => { location.hash = "#profile"; } } }, "הפרופיל שלי")),
         newCount > 0 && h("p", { class: "notice" }, newCount === 1 ? "משרה חדשה אחת נוספה מאז הביקור הקודם שלך." : newCount + " משרות חדשות נוספו מאז הביקור הקודם שלך."),
         h("div", { class: "chips", role: "group", "aria-label": "סינון" }, FILTERS.map(([k, label]) =>
@@ -167,6 +229,7 @@
           (isNew || mark) && h("span", { class: "tags" }, isNew && h("span", { class: "pill new" }, "חדשה"), mark && h("span", { class: "pill " + (mark === "skipped" ? "" : mark === "interview" ? "good" : "on") }, MARKS[mark])))),
       !items.length && h("div", { class: "empty" }, !loaded && !loadError ? h("strong", null, "טוען את המשרות…")
         : !jobs.length ? [h("strong", null, "עדיין אין משרות"), "משרות חדשות מתווספות כל הזמן. כדאי לחזור מחר."]
+        : filter === "fit" && !jobs.some(j => arr(profile.functions).includes(j.function || "מכירות")) ? [h("strong", null, "עדיין אין משרות בתחומים שבחרת"), "אנחנו מוסיפים משרות ותחומים חדשים כל הזמן, והן יופיעו כאן. בינתיים אפשר לראות את כל המשרות בלשונית \"הכול\"."]
         : filter === "fit" ? [h("strong", null, "לא מצאנו כרגע משרה שמתאימה לפרופיל שלך"), "אפשר לראות את כל המשרות בלשונית \"הכול\", או לעדכן את הפרופיל."]
         : [h("strong", null, "אין כאן משרות כרגע")]));
   }
@@ -215,7 +278,7 @@
   function route() {
     if (!CFG.url || !CFG.anonKey) { app.replaceChildren(h("div", { class: "empty" }, h("strong", null, "האפליקציה עדיין בהקמה"), "החיבור למסד הנתונים לא הוגדר.")); return; }
     const hash = location.hash, typing = document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName);
-    if (!profile || hash === "#profile") { if (!(typing && draft)) renderOnboarding(); }
+    if (!profile || !profile.functions || hash === "#profile") { if (!(typing && draft)) renderOnboarding(); }
     else {
       draft = null;
       const m = /^#job-([\w-]+)$/.exec(hash);

@@ -5,10 +5,15 @@
   const LEVEL_PAY = { junior: 18000, mid: 32000, senior: 45000 }; // rough ceiling we assume per level; shown as an estimate
 
   function match(job, p) {
-    let score = 30;
+    let score = 12;
     const pros = [], gaps = [];
     const has = (list, v) => Array.isArray(list) && list.includes(v);
     const kinds = p.kinds || [];
+
+    // Field of work: the main gate
+    const fn = job.function || "מכירות";
+    if (has(p.functions, fn)) { score += 22; pros.push("התחום שבחרת: " + fn); }
+    else { score -= 35; gaps.push("התחום הוא " + fn + ", לא אחד מהתחומים שבחרת"); }
 
     // Where
     const regions = job.regions || [];
@@ -36,7 +41,7 @@
 
     if (job.needsSoftwareSales && !has(kinds, "software")) { score -= 25; gaps.push("ניסיון במכירת תוכנה הוא דרישת חובה"); }
     if (job.needsManagement) {
-      if (has(kinds, "team")) { score += 8; pros.push("יש לך ניסיון ניהולי, כנדרש"); }
+      if (p.management || has(kinds, "team")) { score += 8; pros.push("יש לך ניסיון ניהולי, כנדרש"); }
       else { score -= 25; gaps.push("ניסיון ניהולי הוא דרישת חובה"); }
     }
     if (job.needsDegree && !p.degree) { score -= 20; gaps.push("תואר הוא דרישת חובה"); }
