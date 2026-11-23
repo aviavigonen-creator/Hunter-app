@@ -176,16 +176,17 @@
     if (!body || (Array.isArray(body) && !body.length)) return null;
     return h("section", { class: "sec" }, h("h3", null, title), Array.isArray(body) ? h("ul", null, body.map(t => h("li", null, t))) : h("p", null, body));
   }
-  function renderJob(id) {
+  function renderJob(id, flash) {
     const job = jobs.find(j => j.id === id);
     const back = h("button", { class: "textbtn", on: { click: () => { location.hash = ""; } } }, "→ חזרה לרשימה");
     if (!job) { app.replaceChildren(back, h("div", { class: "empty" }, h("strong", null, loaded ? "המשרה כבר לא זמינה" : "טוען…"))); return; }
     const m = HunterMatch.match(job, profile), mark = marks[id] || {};
-    const hint = h("p", { class: "hint", "aria-live": "polite" });
+    const hint = h("p", { class: "hint", "aria-live": "polite" }, flash || "");
     const setMark = async s => {
       const status = mark.status === s ? "" : s;
-      try { await saveMark(id, { status }); hint.textContent = status ? "נשמר: " + MARKS[status] : "הסימון הוסר"; } catch (e) { hint.textContent = "השמירה נכשלה. נסה שוב בעוד רגע."; }
-      renderJob(id);
+      let msg;
+      try { await saveMark(id, { status }); msg = status ? "נשמר: " + MARKS[status] : "הסימון הוסר"; } catch (e) { msg = "השמירה נכשלה. נסה שוב בעוד רגע."; }
+      renderJob(id, msg);
     };
     const notes = h("textarea", { id: "notes", dir: "auto", placeholder: "למשל: עם מי דיברתי, מתי הראיון" });
     notes.value = str(mark.notes);
