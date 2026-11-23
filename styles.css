@@ -71,3 +71,9 @@ textarea { min-height: 96px; resize: vertical; }
 .opt { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 14px; min-height: 44px; }
 .opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; }
+
+input[type="search"], select { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; }
+.selects { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.selects select { min-width: 0; }
+.pre { white-space: pre-line; overflow-wrap: anywhere; }
+.row .co, .row .role { overflow-wrap: anywhere; }
