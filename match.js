@@ -32,7 +32,8 @@
     if (p.wantsCar) {
       if (job.car === "yes") { score += 12; pros.push("רכב צוין במודעה"); }
       else { score -= 6; gaps.push("רכב לא צוין במודעה, צריך לשאול"); }
-    }
+    } else score += 12; // nothing to miss, so it counts as met
+
 
     // Experience
     const years = Number(p.years) || 0, min = Number(job.minYears) || 0;
@@ -54,6 +55,7 @@
 
     // Pay: postings rarely state it, so this is our estimate from the seniority of the role
     const minPay = Number(p.minPay) || 0, ceiling = LEVEL_PAY[job.level];
+    if (!minPay) score += 6; // open on pay: counts as met
     if (minPay && ceiling) {
       if (ceiling >= minPay) score += 6;
       else { score -= 22; gaps.push("לפי הערכה שלנו השכר כנראה נמוך מהיעד שלך. המודעה לא מציינת שכר"); }
